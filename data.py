@@ -1,160 +1,558 @@
-# CS251 - Project 2 - data.py - Max Perrello - 3/8/19
+# Ben Capodanno
+# CS251, data.py
+# This file contains a data class that reads in data from a file
+# 02/19/2019 updated 04/02/2019
 
-import csv
 import numpy as np
+import scipy.stats as sps
 import sys
+import csv
+import time
+import analysis
 
 class Data:
-	def __init__(self, filename = None):
-		# create and initialize fields for the class
-		self.csv_reader = None
-		self.csvfile = None
-		self.headers = [] # list of all headers (prev [])
-		self.types = [] # list of all types
-		self.rows = [] # list of rows of data (sublists)
-		self.data = None # numPy matrix (prev None)
-		self.header2col = {} # dict of headers and their column numbers
-		self.nonNumericHeaders = [] # list of non-numeric columns (by header)
-		self.nonNumericTypes = [] # list of non-numeric column types
-		self.isNumeric = [] # true or false values for if something is numeric
-		self.nonNumericRows = [] # storage of non-num rows
-		if filename != None:
-			self.read(filename)
 
-	def read(self, filename): # reads in and parses data from a csv file
-		with open(filename, 'rU') as self.csvfile:
-			self.csv_reader = csv.reader( self.csvfile ) # python-interactable csv file object
-			self.headers = self.stripper( next(self.csv_reader) )
-			self.types = self.stripper( next(self.csv_reader) ) # list of all types (second line)
-			tempHeadList = [] # temp holding list for numeric headers
-			tempTypeList = [] # temp holding list for numeric types
-			for x in range(len(self.types)): # looking for non-numeric columns
-				if self.types[x] == "numeric":
-					tempHeadList.append(self.headers[x]) # record numeric column
-					tempTypeList.append(self.types[x]) # record numeric column
-					self.isNumeric.append(True) # record whether is numeric
-				else:
-					self.nonNumericHeaders.append(self.headers[x]) # record non-num head
-					self.nonNumericTypes.append(self.types[x]) # record non-num type
-					self.isNumeric.append(False) # record whether is numeric
-			self.headers = self.header2ColEr( tempHeadList )[:] # update new head global
-			self.types = tempTypeList[:] # update new type global
-			for row in self.csv_reader: # iterate over file object by row
-				sublist = []
-				nonNumericSublist = []
-				for i in range(len(row)):
-					if self.isNumeric[i]:
-						sublist.append( float(row[i]) ) # parse each data string as float
-					else:
-						nonNumericSublist.append( row[i] ) # parse each data string as float
-				self.rows.append(sublist) # append row to list of rows
-				self.nonNumericRows.append(nonNumericSublist) # append sub to nonNumRows
-		self.data = np.matrix(self.rows) # build numPy matrix from list of rows
+    def __init__( self, filename = None ):
+        # Create and initialize class fields
+        self.headers = []
+        self.types = []
+        self.data = []
+        self.enum = {}
+        self.header2col = {}
+        self.headers_s = []
+        self.data_s = []
+        self.header2col_s = {}
+        self.plotting = []
 
-	def stripper(self, glist): # strips whitespaces from items in given list and returns it
-		newList = []
-		for value in range(len(glist)):
-			newList.append( glist[value].strip() ) # strip leading and trailing whitespace from each value
-		return newList # return finished list
+        # Read File
+        if ( filename != None ):
+            self.read( filename )
 
-	def header2ColEr(self, list): # creates dict of headers and their columns from list
-		num = 0 # counter for columns
-		for item in list:
-			self.header2col[item] = num # add item name as dict entry w col num as value
-			num = num + 1 # increment column number
-		return list # return finished list
+    # output a neat string representation of the (numerical) data set
+    def __str__( self, num = True ):
+        # set an offset based on the length of the first header
 
-	def floatEr(self, string): # tries to parse a string as a float, returns it
-		try: # attempt to parse the string as a float
-			newString = float(string)
-		except ValueError:
-			return string # if it fails, just return the string
-		return newString # if it's successful, return the parsed float
+        if not num:
+            headers = self.get_headers( True )
+            if len( headers ) == 0:
+                return "No Data in String Matrix"
+            offset = len( headers[0] ) * 3
 
-	def get_headers(self): # accessor for list of headers
-		return self.headers
+        else:
+            headers = self.get_headers()
+            offset = len( headers[0] ) * 2
 
-	def get_types(self): # accessor for list of types
-		return self.types
+        # print the first five column heads
+        s = headers[0].ljust( offset )
+        for i in headers[1:5]:
+            s += i.ljust( offset )
+        if self.get_num_dimensions( not num ) > 5:
+            s += "and " + str( ( self.get_num_dimensions() - 5 ) ) + " other columns"
+        print( s )
 
-	def get_num_dimensions(self): # returns number of columns
-		return ( self.data.shape[1] )
+        # set the numerical offset and check how many rows
+        if num:
+            offset = "%" + str( offset ) + ".3f"
+        rows = self.get_num_points()
+        overflow = False
 
-	def get_num_points(self): # returns number of rows
-		return ( self.data.shape[0] )
+        if rows > 25:
+            rows = 25
+            overflow = True
 
-	def get_row(self, rowIndex): # returns the specified row as a NumPy matrix
-		# return ( self.rows[rowIndex] )
-		return ( self.data[rowIndex,] )
+        # print the first 25 rows
+        for i in range( 0, rows ):
+            if num:
+                s = str( self.get_value( headers[0], i ) )
+                for header in headers[1:5]:
 
-	def get_value(self, header, rowIndex): # returns the specified value in the given column
-		if header in self.header2col: # as long as the header is in the dict
-			return ( self.data.item((rowIndex, self.header2col[header])) )
-		else: # print alert message
-			print("\n\n\tThere is no header by the name of '", header, "'\n", sep='')
-			return
+                    s += offset % ( self.get_value( header, i ) )
+                print( s )
+            else:
+                s = str( self.get_value( headers[0], i, True ) ).ljust( offset )
+                for header in headers[1:5]:
+                    s += self.get_value( header, i, True ).ljust( offset )
+                print( s )
 
-	def get_data(self): # returns the numpy matrix of all parsed data.
-		return self.data
+        if overflow:
+            print( "and " + str( ( self.get_num_points() - 25 ) ) + " other rows." )
 
-	def choose_columns(self, columns): # uses list of header names to select columns
-		dataSplit = np.hsplit( self.data, self.get_num_dimensions() )
-		colTargets = []
-		for col in range(len(columns)):
-			colTargets.append(dataSplit[self.header2col[columns[col]]])
-		return np.hstack(colTargets)
+        return 1
 
-	def add_column(self, column, header = "NewHeader"): # adds the given column to the data matrix
-		# if either the height is incorrect or it's wider than one unit
-		if (column.shape[0] != self.data.shape[0]) or (column.shape[1] != 1):
-			# if they accidentally put in the transpose
-			if (column.shape[1] == self.data.shape[0]):
-				print("Hey dummy--you put the column in sideways!")
-			else:
-				# alert the user to their mistake
-				print("Whoops! The dimensions of the column you're",
-				"trying to add should be", self.data.shape[0], "by 1.")
-		else:
-			# smash the last column onto the right side of the existing data matrix
-			self.data = np.hstack((self.data, column))
-			# add a header for it (if one isn't given, uses "NewHeader")
-			self.headers.append(header)
+    # read in a csv file, taking in the important metadata
+    def read( self, filename ):
+        # open the file with universal read and set up enum iterator and string i
+        fp = open( filename, 'rU' )
+        tmp_enum = {}
+        enum_iterator = 1.0
+        string_indices = []
 
-	def write(self, filename, headers = None):
-		if (headers == None):
-			headers = self.get_headers()
-		# create a matrix of the data for the chosen columns
-		chosen_data = self.choose_columns(headers)
-		# assign to the variable file the open file of the given filename
-		file = open(filename, 'w')
-		# write each column
-		for i in range(len(headers)):
-			file.write(headers[i])
-			# if not the last column
-			if (i != (len(headers) - 1)):
-				file.write(', ')
-		file.write("\n")
-		# for the number of rows in the chosen data
-		for i in range(chosen_data.shape[0]):
-			# for the number of columns in the chosen data
-			for j in range(chosen_data.shape[1]):
-				# write the piece of data at i, j
-				file.write( str(chosen_data[i,j]) )
-				# if not the last column
-				if j != (chosen_data.shape[1] - 1):
-					file.write(', ')
-			file.write(', ')
-		print("Successfully written to %s.", filename)
+        csv_reader = csv.reader( fp )
 
-def main(argv):
-	testee = Data(sys.argv[1])
-	print("\n\nData Range:\n", anal.data_range( testee.get_headers(), testee ), "\n\n\n----")
-	print("\n\nMean:\n", anal.mean( testee.get_headers(), testee ), "\n\n\n----")
-	print("\n\nStDev:\n", anal.stdev( testee.get_headers(), testee ), "\n\n\n----")
-	print("\n\nSeparately Normalized Columns:\n", anal.normalize_columns_separately( testee.get_headers(), testee ), "\n\n\n----")
-	print("\n\nColumns Normalized Together:\n", anal.normalize_columns_together( testee.get_headers(), testee ), "\n\n\n----")
-	print("\n\nHeaders:\n", testee.get_headers(), "\n\n\n----")
-	print("\n\nChosen Columns:\n", testee.choose_columns( [ testee.get_headers()[0], testee.get_headers()[0] ] ))
+        self.headers = next( csv_reader )
+        self.types = next( csv_reader )
+
+        # Strip the types of whitespace and find where strings exist
+        for i in range( len( self.types ) ):
+            self.types[i] = self.types[i].strip()
+            if( self.types[i] == "string" ):
+                self.headers_s.append( self.headers[i] )
+                string_indices.append( i )
+
+        # Loop through each line and decide what to do with each value
+        for line in csv_reader:
+            toAdd = []
+            toAdd_s = []
+            tmp = {}
+            tmp_idx = 0
+
+            for i in range( len( line ) ):
+                # if we know the value is a string add it to the string matrix
+                if i in string_indices:
+                    stripped = line[i].strip()
+                    toAdd_s.append( stripped )
+                    continue
+
+                if i == 16:
+                    if line[i] in tmp:
+                        pass
+                    else:
+                        tmp_enum[ line[i] ] = tmp_idx
+                        tmp[tmp_idx] = line[i]
+                        tmp_idx = tmp_idx + 1
+                # we can append numeric types directly as floats
+                if self.types[i] == "numeric":
+                    toAdd.append( float( line[i] ) )
+
+                # if the key is already in the dict, pass this func
+                # if the key isn't add it with value iterator and increment
+                elif self.types[i] == "enum":
+                    if line[i] in tmp_enum:
+                        pass
+                    else:
+                        tmp_enum[ line[i] ] = enum_iterator
+                        self.enum[enum_iterator] = line[i]
+                        enum_iterator = enum_iterator + 1
+
+                    toAdd.append( float( tmp_enum[ line[i] ] ) )
+
+                # Find how many days it has been since jan. 1, 1970
+                # IMPLEMENTATION ASSUMPTIONS
+                # This implementation counts leap years as one additional day every four years, not a quarter day each year
+                # Dates should be in the American date format (MM/DD/YYYY OR MM/DD/YY) and separated by a slash '/'
+                # The format YYYYMM or YYYYMMDD is also acceptable and is handled by the catch portion of the statement
+                elif self.types[i] == "date":
+                    date = 0.0
+                    month_length = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
+                                  7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
+
+                    # split date into list of individual aspects
+                    splitDate = line[i].split( "/" )
+
+                    # try parses two formats, except parses other two
+                    try:
+                        initial_year = int( splitDate[2] )
+                        # find number of leap years (-1) and add the -1 back if past february
+                        leaps = -1 + ( ( initial_year - 1968 ) // 4 )
+                        if( ( int( splitDate[0] ) > 2 ) and ( leaps > -1 ) ):
+                            leaps = leaps + 1
+
+                        # elongate years formatted as YY to subtract better in future
+                        if len( splitDate[2] ) < 4:
+                            if int( splitDate[2] ) > 69:
+                                splitDate[2] = "19" + splitDate[2]
+                            else:
+                                splitDate[2] = "20" + splitDate[2]
+
+                        # make the dates integers
+                        for i in range( len( splitDate ) ):
+                            splitDate[i] = int( splitDate[i] )
+
+                        # starting at epoch (1/1/1970), count days caused by years
+                        initial = ( splitDate[2] - 1970 ) * 365
+                        secondary = initial
+
+                        # starting at epoch (1/1/1970), count days caused by months
+                        for i in range( 1, splitDate[0] ):
+                            secondary = initial + month_length[i]
+
+                        # starting at epoch (1/1/1970), count days caused by days
+                        final_date = secondary + splitDate[1] + leaps
+
+                    except IndexError:
+                        initial_year = int( splitDate[0][0:4] )
+                        # find number of leap years (-1) and add the -1 back if past february
+                        leaps = -1 + ( ( initial_year - 1968 ) // 4 )
+                        if( ( initial_year > 2 ) and ( leaps > -1 ) ):
+                            leaps = leaps + 1
+                        # starting at epoch (1/1/1970), count days caused by years
+                        initial = ( initial_year - 1970 ) * 365
+                        secondary = -1 + initial
+                        # starting at epoch (1/1/1970), count days caused by months
+                        for i in range( 1, int( splitDate[0][4:6] ) ):
+                            final_date = secondary + month_length[i]
+                        # test for YYYYMMDD format
+                        try:
+                            final_date = final_date + int( splitDate[0][6:8] ) + leaps
+                        # otherwise add leap years as extra days
+                        except ( IndexError, ValueError ):
+                            final_date = final_date + leaps
+                    finally:
+                        toAdd.append( float( final_date ) )
+
+            self.data.append( toAdd )
+            self.data_s.append( toAdd_s )
+
+        # remove headers and string references from main matrix
+        for i in reversed( string_indices ):
+            self.headers.pop( i )
+            self.types.pop( i )
+
+        # Strip whitespace from headers and set up header to column dict
+        for i in range( 0, len( self.headers ) ):
+            self.headers[i] = self.headers[i].strip()
+            self.header2col[ self.headers[i] ] = i
+        for i in range( 0, len( self.headers_s ) ):
+            self.headers_s[i] = self.headers_s[i].strip()
+            self.header2col_s[ self.headers_s[i] ] = i
+
+        self.data = np.matrix( self.data )
+        self.data_s = np.matrix( self.data_s )
+        print( tmp )
+        return 1
+
+    # return a list of the data headers
+    def get_headers( self, s = False ):
+        if s:
+            return self.headers_s
+        return self.headers
+
+    # return a list of the data types
+    def get_types( self ):
+        return self.types
+
+    # return the number of columns
+    def get_num_dimensions( self, s = False ):
+        if s:
+            return self.data_s.shape[1]
+        return self.data.shape[1]
+
+    # return the number of rows
+    def get_num_points( self, s = False ):
+        if s:
+            return self.data_s.shape[0]
+        return self.data.shape[0]
+
+    # return a list of all values in a given row
+    def get_row( self, index, s = False):
+        if s:
+            return self.data_s[index]
+        return self.data[ index ]
+
+    # takes in a name, type, and matrix of points and adds it to the data
+    def add_col( self, name, type, matrix ):
+        '''Returns -1 if invalid type
+        Returns -(size of matrix) if size of matrix does not match current points
+        Returns (size of matrix) if data was inserted successfully'''
+
+        if type != "string" and type != "numeric" and type != "enum" and type != "date":
+            raise ValueError('Invalid type: ' + str( name ) + ". Please enter type == 'string', 'numeric', 'enum', or 'date'.")
+            return -1
+        if type == "string":
+            if( np.size( matrix, 0 ) != self.get_num_points( True ) ):
+                raise ValueError('Row length of new data must equate to length of current matrix')
+                return -np.size( matrix, 0 )
+            self.headers_s.append( str( name ) )
+            self.data_s = np.hstack( ( self.data_s, matrix ) )
+            self.header2col_s[str(name)] = get_num_dimensions( True ) - 1
+        else:
+            self.headers.append( str( name ) )
+            self.types.append( str( type ) )
+            self.data = np.hstack( ( self.data, matrix ) )
+            self.header2col[str(name)] = self.get_num_dimensions() - 1
+        return np.size( matrix, 0 )
+
+    # allow user to access any value in the matrix
+    # control flow allows for using either the string name or the index
+    def get_value( self, header, index, s = False ):
+        # if index use that
+        if isinstance( header, int ):
+            if s:
+                return self.data_s.item( ( index, header ) )
+            return self.data.item( ( index, header ) )
+        # else check if string is in the header list
+        else:
+            try:
+                if s:
+                    return self.data_s.item( ( index, self.header2col_s[ header ] ) )
+                return self.data.item( ( index, self.header2col[ header ] ) )
+            except KeyError:
+                print( "No header (" + header + ") in dataset." )
+                return -9999
+
+    # allow user to specify a subset of the matrix to return with a header list
+    # this list can be either indices or strings
+    # also allows the user to get specific rows, given by a tuple of (lower, upper)
+    def subset( self, cols = None, rows = None, s = False ):
+        ix = []
+        iy = rows
+
+        # Allow for default values to be members of self with this logic
+        if cols is None:
+            if s:
+                cols = self.headers_s
+            else:
+                cols = self.headers
+
+        ix = analysis.convert_indices( self, cols )
+
+        if rows is None:
+            iy = ( 0, self.get_num_points() )
+
+        return np.matrix( self.data[ iy[0]:iy[1], ix ] )
+
+    # write data out to a csv file
+    def write( self, filename, headers = None, s = False ):
+        # this allows just one control flow for physical writing
+        if s:
+            temp_head = self.headers
+            temp_data = self.data
+            temp_2col = self.header2col
+            headers = self.get_headers( True )
+            self.headers = self.headers_s
+            self.data = self.data_s
+            self.header2col = self.header2col_s
+
+        if headers == None:
+            headers = self.get_headers()
+
+        fn = open( str( filename ), "w" )
+
+        indices = []
+        # write headers and types
+        i = 0
+        for header in headers:
+            if i == len( headers ) - 1:
+                fn.write( header )
+                indices.append( self.header2col[header] )
+                i += 1
+                continue
+            fn.write( header + "," )
+            indices.append( self.header2col[header] )
+            i += 1
+
+        fn.write("\n")
+        i = 0
+        for idx in indices:
+            if i == len( indices ) - 1:
+                fn.write( self.types[idx] )
+                continue
+            fn.write( self.types[idx] + "," )
+            i += 1
+        fn.write("\n")
+
+        # write data
+        for i in range( np.size( self.data, 0 ) ):
+            for j in range( np.size( self.data, 1 ) ):
+                if j == ( np.size( self.data, 1 ) - 1 ):
+                    fn.write( str( self.data[i,j] ) )
+                    continue
+                fn.write( str( self.data[i,j] ) + "," )
+            fn.write( "\n" )
+
+        fn.close()
+
+        # revert temperary string data
+        if s:
+            self.headers = temp_head
+            self.data = temp_data
+            self.header2col = temp_2col
+
+class PCAData( Data ):
+
+    def __init__(self, proj_data, eigenvectors, eigenvalues, mean_dv, orig_dh ):
+        super( PCAData, self ).__init__( None )
+        self.data = proj_data
+        self.eigenvalues = eigenvalues
+        self.eigenvectors = eigenvectors
+        self.mean_dv = mean_dv
+        self.orig_dh = orig_dh
+        cols = self.get_num_dimensions()
+        for i in range( cols ):
+            if i < 10:
+                self.headers.append( "PCA0" + str( i ) )
+            else:
+                self.headers.append( "PCA" + str( i ) )
+            self.header2col[ self.headers[i] ] = i
+            self.types.append( "numeric" )
+
+    def get_eigenvalues( self ):
+        return self.eigenvalues
+
+    def get_eigenvectors( self ):
+        return self.eigenvectors
+
+    def get_original_means( self ):
+        return self.mean_dv
+
+    def get_original_headers( self ):
+        return self.orig_dh
+
+class KData( Data ):
+
+    def __init__( self, data, headers, means, codes, errors, quality = None ):
+        super( KData, self ).__init__( None )
+        self.headers = headers
+        for i in range( len( headers ) ):
+            print( self.headers )
+            self.header2col[ self.headers[i] ] = i
+            self.types.append( "numeric" )
+        self.data = data
+        self.codebook = means
+        self.codes = codes
+        self.errors = errors
+        self.k = np.size( self.codebook, 0 )
+        if quality == None:
+            self.quality = analysis.kmeans_quality( errors, self.k )
+        else: self.quality = quality
+
+    def get_codebook( self ):
+        return self.codebook
+
+    def get_codes( self ):
+        return self.codes
+
+    def get_errors( self ):
+        return self.errors
+
+    def get_k( self ):
+        return self.k
+
+    def write( self, filename, headers = None ):
+        if headers == None:
+            headers = self.get_headers()
+
+        fn = open( str( filename ), "w" )
+
+        fn.write( "Cluster Means - \n")
+        for i in range( np.size( self.codebook, 0 ) ):
+            fn.write( "Cluster " + str( i ) + ": " + str( self.codebook[i,:] ) + "\n" )
+
+        fn.write( "\nCluster Membership and Errors - \n" )
+        for i in range( np.size( self.codes.T, 0 ) ):
+            fn.write( "Point " + str( i ) + " -> Cluster " + str( self.codes.T[i] ) + " with error: " + str( self.errors[i] ) + "\n" )
+
+        fn.write("\nOverall Quality Score: " + str( self.quality ) + "\n")
+
+        fn.write( "\nOriginal Data - \n\n")
+        indices = []
+        # write headers and types
+        for header in headers:
+            fn.write( header + " " )
+            indices.append( self.header2col[header] )
+        fn.write("\n")
+        for idx in indices:
+            fn.write( self.types[idx] + " " )
+        fn.write( "\n" )
+        # write data
+        for i in range( np.size( self.data, 0 ) ):
+            for j in range( np.size( self.data, 1 ) ):
+                fn.write( str( self.data[i,j] ) + " " )
+            fn.write( "\n" )
+
+        fn.close()
 
 if __name__ == "__main__":
-	main(sys.argv)
+
+    # Data Class Tests
+    data = Data( sys.argv[1] )
+    print( "Headers" )
+    print( data.get_headers(), "\n" )
+
+    print( "String Headers" )
+    print( data.get_headers( True ), "\n" )
+
+    print( "Types" )
+    print( data.get_types(), "\n" )
+
+    print( "Dimensions" )
+    print( data.get_num_dimensions(), "\n" )
+
+    print( "String Dimensions" )
+    print( data.get_num_dimensions( True ), "\n" )
+
+    print( "Points" )
+    print( data.get_num_points(), "\n" )
+
+    print( "String Points" )
+    print( data.get_num_points( True ), "\n" )
+
+    row = 0
+    print( "Row Index: %d" % row)
+    print( data.get_row( row ), "\n" )
+
+    print( "Row in String Matrix: %d" % row)
+    print( data.get_row( row, True ), "\n" )
+
+    row = 1
+    col = 0
+    col_s = data.headers[0]
+    try:
+        print( "Specific Data Points")
+        print( data.get_value( col, row ) )
+        print( data.get_value( col, row ), "\n" )
+    except IndexError:
+        print( IndexError, " change row and columns in test\n" )
+
+    try:
+        print( "Specific Data Points in String")
+        print( data.get_value( col, row, True) )
+        print( data.get_value( col, row, True ), "\n" )
+    except IndexError:
+        print( IndexError, " change row and columns in test\n" )
+
+    print( "Numeric Matrix Representation" )
+    data.__str__()
+    print()
+    print( "String Matrix Representation" )
+    data.__str__( False )
+    print()
+
+    print( "Subsets of Matrix\n" )
+    col = [1]
+    row = [2, 4]
+    print( "All rows with Column Subset" )
+    print( data.subset( col ), "\n" )
+    print( "All columns with Row Subset" )
+    print( data.subset( rows = row ), "\n" )
+    print( "Subset Rows and Columns")
+    print( data.subset( col, row ), "\n" )
+
+    print( "Range of Numeric Data" )
+    print( analysis.data_range( data, data.get_headers() ), "\n" )
+
+    print( "IQR of the Numeric Columns" )
+    print( analysis.data_iqr( data, data.get_headers() ), "\n" )
+
+    print( "Mean of the Numeric Columns" )
+    print( analysis.data_mean( data, data.get_headers() ), "\n" )
+
+    print( "Median of the Numeric Columns" )
+    print( analysis.data_median( data, data.get_headers() ), "\n" )
+
+    print( "StDev of the Numeric Columns" )
+    print( analysis.data_stdev( data, data.get_headers() ), "\n" )
+
+    print( "Variance of the Numeric Columns" )
+    print( analysis.data_variance( data, data.get_headers() ), "\n" )
+
+    print( "Normalized Numeric Columns" )
+    print( analysis.normalize_columns_separately( data, data.get_headers() ), "\n" )
+
+    print( "Normalized Numeric Array" )
+    print( analysis.normalize_columns_together( data, data.get_headers() ), "\n" )
+
+    print( "Data with first row added to end" )
+    data.add_col( "added data", "numeric", data.subset( cols = [0] ) )
+    data.__str__()
+    print()
