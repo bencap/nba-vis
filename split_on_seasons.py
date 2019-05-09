@@ -28,6 +28,7 @@ def write_like_seasons( file ):
                 f = open("season_" + curr_season + ".csv", "w+")
                 for l in header:
                     f.write( l[1]+","+l[2]+","+l[7]+","+l[14]+","+l[15]+","+l[16]+","+l[17]+","+l[22]+"\n" )
+                    f.write( ( "numeric,string,numeric,string,enum,string,string,numeric\n" ) )
                 for l in buffer:
                     f.write( l[1]+","+l[2]+","+l[7]+","+l[14]+","+l[15]+","+l[16]+","+l[17]+","+l[22]+"\n" )
                 f.close()
@@ -43,6 +44,7 @@ def write_like_seasons( file ):
         f = open("season_" + curr_season + ".csv", "w+")
         for l in header:
             f.write( l[1]+","+l[2]+","+l[7]+","+l[14]+","+l[15]+","+l[16]+","+l[17]+","+l[22]+"\n" )
+            f.write( ( "numeric,string,numeric,string,enum,string,string,numeric\n" ) )
         for l in buffer:
             f.write( l[1]+","+l[2]+","+l[7]+","+l[14]+","+l[15]+","+l[16]+","+l[17]+","+l[22]+"\n" )
         f.close()
