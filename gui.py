@@ -16,6 +16,8 @@ import analysis
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+from matplotlib import cm
+import matplotlib as mpl
 
 # create a class to build and manage the display
 class DisplayApp:
@@ -95,8 +97,12 @@ class DisplayApp:
         self.centercourt_endpoints = np.matrix( [[0.625,0.625,0,1], [0.975, 0.975,0,1],
                                                [0.725,0.725,0,1], [0.875, 0.875,0,1]])
 
+        self.threevis_endpoints = np.matrix( [[0.2,-0.2,0,1], [0.3, 0.1,0,1],
+                                              [1.3,-0.2,0,1], [1.4, 0.1,0,1]])
+
         self.axes = []
         self.court = []
+        self.heat = []
         self.buildAxes()
         self.buildCourt()
 
@@ -434,22 +440,44 @@ class DisplayApp:
         self.playerShotStringData = self.data.data_s[self.playerShots,1:4]
         self.playerShotNumData = self.data.data[self.playerShots,2:4]
 
+        makes, misses = self.buildPerc( self.playerShotStringData, self.playerShotNumData, playerID )
+
+        for header in self.data.enum:
+            if self.data.enum[header] == "Left Corner 3": left_three = int( header - 1 )
+            if self.data.enum[header] == "Right Corner 3": right_three = int( header - 1 )
+
+        if misses[left_three] + makes[left_three] != 0:
+            left_perc = round( ( makes[left_three] / ( misses[left_three] + makes[left_three] ) ) * 100 )
+        else: left_perc = 0
+        if misses[right_three] + makes[right_three] != 0:
+            right_perc = round( ( makes[right_three] / ( misses[right_three] + makes[right_three] ) ) * 100 )
+        else: right_perc = 0
+
+        colormap = cm.get_cmap('Reds')
+
+        vtm = self.view.build()
+        pts = ( vtm * self.threevis_endpoints.T ).T
+        threecorner_left =   self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(left_perc/100)[:-1] ) )
+        threecorner_right =  self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(right_perc/100)[:-1] ) )
+
     def handleStats( self  ):
         player = self.plyrBox.curselection()[0]
         player_id = self.players.data[np.where( self.players.data_s == self.currTeamPlayerNames[player] )[0],1]
+        name_idx = np.where( self.players.data[:,1] == player_id )[0]
+        name = self.players.data_s[ name_idx, 0 ]
 
         # indices for player shots, and retrival of string and numerical data
         self.playerShots = np.where( self.data.data[:,0] == player_id )[0]
         self.playerShotStringData = self.data.data_s[self.playerShots,1:4]
         self.playerShotNumData = self.data.data[self.playerShots,2:4]
 
-        self.buildPerc( self.playerShotStringData, self.playerShotNumData, player_id )
+        makes, misses = self.buildPerc( self.playerShotStringData, self.playerShotNumData, player_id )
+
+        title = "Numeric Shot Statistics for " + name[0][0,0]
+        dialog = Dialog_PCA_Stats( self, self.data.enum, makes, misses, player_id, title )
         pass
 
     def buildPerc( self, playerString, playerNum, player_id ):
-        name_idx = np.where( self.players.data[:,1] == player_id )[0]
-        name = self.players.data_s[ name_idx, 0 ]
-
         indices = []
         for k in self.data.enum:
             indices.append( np.where( playerNum[:,0] == k )[0] )
@@ -465,8 +493,7 @@ class DisplayApp:
             makes.append( len( np.where( playerNum[idx,1] == 1 )[0] ) )
             misses.append( len( np.where( playerNum[idx,1] == 0 )[0] ) )
 
-        title = "Numeric Shot Statistics for " + name[0][0,0]
-        dialog = Dialog_PCA_Stats( self, self.data.enum, makes, misses, player_id, title )
+        return (makes,misses)
 
     # translation
     def handleButton1(self, event):
