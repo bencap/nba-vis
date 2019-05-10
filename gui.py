@@ -421,7 +421,6 @@ class DisplayApp:
         self.root.bind( '<Control-Button-1>', self.handleButton3 )
         self.root.bind( '<Button-2>', self.handleButton2 )
         self.root.bind( '<Button-3>', self.handleButton3 )
-        self.canvas.bind( '<Motion>', self.handleMotion )
         self.root.bind( '<B1-Motion>', self.handleButton1Motion )
         self.root.bind( '<Control-B1-Motion>', self.handleButton3Motion )
         self.root.bind( '<B2-Motion>', self.handleButton2Motion )
@@ -674,45 +673,6 @@ class DisplayApp:
         print('handle button 3: %d %d' % (event.x, event.y))
         self.baseClick = (event.x, event.y)
         self.viewCopy = self.view.clone()
-
-    # This method displays the point coordinates if the mouse moves over it
-    def handleMotion( self, event ):
-        event_coords = [ float( event.x ), float( event.y ) ] # format event coord as obj coords will be
-
-        # get each objects coords and check if it is under mouse
-        for object in self.objects:
-            obj_coords = self.canvas.coords( object )[0:2]
-            # print if under mouse
-            if obj_coords[0] <= event_coords[0] < obj_coords[0] + 5 and obj_coords[1] <= event_coords[1] < obj_coords[1] + 5:
-                text = tk.StringVar( self.root )
-                pt = object + 3 - self.pt_i
-                if len( self.headers ) == 2:
-                    coord1 = "{0:.2f}".format( self.data.data[ object - self.pt_i, self.headers[0] ] )
-                    coord2 = "{0:.2f}".format( self.data.data[ object - self.pt_i, self.headers[1] ] )
-
-                    # add a label to the status area that gives a point ( x, y ) on mouse over
-                    text.set( "point " + str(pt) + " at " + "( " + coord1 + ", " + coord2 + " )" )
-                    self.label = tk.Label( self.statusArea, text=text.get(), width=30 )
-                    self.label.pack( side=tk.RIGHT, pady=2 )
-
-                else:
-                    coord1 = "{0:.2f}".format( self.data.data[ object - self.pt_i, self.headers[0] ] )
-                    coord2 = "{0:.2f}".format( self.data.data[ object - self.pt_i, self.headers[1] ] )
-                    coord3 = "{0:.2f}".format( self.data.data[ object - self.pt_i, self.headers[2] ] )
-
-                    # add a label to the status area that gives a point ( x, y ) on mouse over
-                    text.set( "point " + str(pt) + " at " + "( " + coord1 + ", " + coord2 + ", " + coord3 + " )" )
-                    self.label = tk.Label( self.statusArea, text=text.get(), width=30 )
-                    self.label.pack( side=tk.RIGHT, pady=2 )
-
-                return
-
-            # if the mouse moves, delete the label
-            else:
-                try:
-                    self.label.destroy()
-                except AttributeError:
-                    pass
 
     # translation
     def handleButton1Motion(self, event):
