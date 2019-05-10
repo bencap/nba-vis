@@ -267,7 +267,7 @@ class DisplayApp:
 
         pts = ( vtm * self.freethrow_endpoints.T ).T
         freethrow_top =     self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=0, extent=180, style='arc',width=2 )
-        freethrow_bot =     self.canvas.create_arc( pts[2,0], pts[2,1], pts[3,0], pts[3,1], start=0, extent=-180, style='arc',width=2 )
+        freethrow_bot =     self.canvas.create_arc( pts[2,0], pts[2,1], pts[3,0], pts[3,1], start=0, extent=-180, style='arc',width=1 )
         restricted_area =   self.canvas.create_arc( pts[4,0], pts[4,1], pts[5,0], pts[5,1], start=0, extent=180, style='arc',width=2)
 
         pts = ( vtm * self.threecorner_endpoints.T ).T
@@ -434,10 +434,39 @@ class DisplayApp:
         self.playerShotStringData = self.data.data_s[self.playerShots,1:4]
         self.playerShotNumData = self.data.data[self.playerShots,2:4]
 
+    def handleStats( self  ):
+        player = self.plyrBox.curselection()[0]
+        player_id = self.players.data[np.where( self.players.data_s == self.currTeamPlayerNames[player] )[0],1]
 
+        # indices for player shots, and retrival of string and numerical data
+        self.playerShots = np.where( self.data.data[:,0] == player_id )[0]
+        self.playerShotStringData = self.data.data_s[self.playerShots,1:4]
+        self.playerShotNumData = self.data.data[self.playerShots,2:4]
 
-    def handleStats( self ):
+        self.buildPerc( self.playerShotStringData, self.playerShotNumData, player_id )
         pass
+
+    def buildPerc( self, playerString, playerNum, player_id ):
+        name_idx = np.where( self.players.data[:,1] == player_id )[0]
+        name = self.players.data_s[ name_idx, 0 ]
+
+        indices = []
+        for k in self.data.enum:
+            indices.append( np.where( playerNum[:,0] == k )[0] )
+
+        makes = []
+        misses = []
+
+        for idx in indices:
+            if len( idx ) < 1:
+                makes.append( 0 )
+                misses.append( 0 )
+                continue
+            makes.append( len( np.where( playerNum[idx,1] == 1 )[0] ) )
+            misses.append( len( np.where( playerNum[idx,1] == 0 )[0] ) )
+
+        title = "Numeric Shot Statistics for " + name[0][0,0]
+        dialog = Dialog_PCA_Stats( self, self.data.enum, makes, misses, player_id, title )
 
     # translation
     def handleButton1(self, event):
@@ -565,9 +594,8 @@ class DisplayApp:
         print('Entering main loop')
         self.root.mainloop()
 
-class Dialog_Plot( tk.Toplevel ):
-
-    def __init__(self, parent, headers, title = None):
+class Dialog_PCA_Stats( tk.Toplevel ):
+    def __init__(self, parent, headers, makes, misses, player_id, title = None):
 
         tk.Toplevel.__init__( self )
         #self.transient(parent)
@@ -578,7 +606,8 @@ class Dialog_Plot( tk.Toplevel ):
         self.parent = parent
 
         self.headers = headers
-        self.cancelled = None
+        self.makes = makes
+        self.misses = misses
 
         body = tk.Frame(self)
         self.result = self.body(body)
@@ -587,8 +616,6 @@ class Dialog_Plot( tk.Toplevel ):
         self.buttonbox()
 
         self.grab_set()
-
-        self.protocol("WM_DELETE_WINDOW", self.cancel)
 
         self.geometry("+%d+%d" % (parent.root.winfo_rootx()+100,
                                   parent.root.winfo_rooty()+100))
@@ -599,32 +626,32 @@ class Dialog_Plot( tk.Toplevel ):
     # construction hooks
 
     def body(self, master):
+        lab = []
 
-        labx = tk.Label( self, text = "       X-Axis         Y-Axis       Z-Axis   Color Axis Size Axis" )
-        x = tk.StringVar(master)
-        x.set( self.headers[0] ) # default value
-        s = tk.OptionMenu( master, x, *self.headers )
-        labx.pack( side = "top" )
-        s.pack( side = "left" )
+        idx = 1
 
-        y = tk.StringVar(master)
-        y.set( self.headers[1] ) # default value
-        t = tk.OptionMenu( master, y, *self.headers )
-        t.pack( side = "left" )
+        # place headers
+        for header in self.headers:
+            tk.Label( master, text = self.headers[header] + "  " ).grid( row = 0, column = idx)
+            idx+=1
 
-        z = tk.StringVar(master)
-        u = tk.OptionMenu( master, z, *self.headers )
-        u.pack( side = "left" )
+        tk.Label( master, text = "Makes" ).grid( row = 1, column = 0 )
+        tk.Label( master, text = "Misses" ).grid( row = 2, column = 0 )
+        tk.Label( master, text = "Percentage" ).grid( row = 3, column = 0 )
+        tk.Label( master, text = "Fraction" ).grid( row = 4, column = 0 )
 
-        col = tk.StringVar(master)
-        v = tk.OptionMenu( master, col, *self.headers )
-        v.pack( side = "left" )
+        both = [self.makes, self.misses]
+        for i in range( len( self.headers ) ):
+            for j in range( len( both ) ):
+                tk.Label( master, text = str( both[j][i] ) ).grid( row = j + 1, column = i + 1 )
+            if self.misses[i] == 0:
+                tk.Label( master, text = "0.0%" ).grid( row = 3, column = i + 1 )
+            else:
+                tk.Label( master, text = str( round( ( self.makes[i] / ( self.misses[i] + self.makes[i] ) ) * 100 ) ) + "%" ).grid( row = 3, column = i + 1 )
+            tk.Label( master, text = str( self.makes[i] ) + " / " + str( self.misses[i] + self.makes[i] ) ).grid( row = 4, column = i + 1)
 
-        size = tk.StringVar(master)
-        w = tk.OptionMenu( master, size, *self.headers )
-        w.pack( side = "left" )
 
-        return (x,y,z,col,size)
+        return True
 
     def buttonbox(self):
         # add standard button box. override if you don't want the
@@ -632,57 +659,21 @@ class Dialog_Plot( tk.Toplevel ):
 
         box = tk.Frame(self)
 
-        w = tk.Button(box, text="OK", width=10, command=self.ok, default="active")
-        w.pack(side="left", padx=5, pady=5)
-        w = tk.Button(box, text="Cancel", width=10, command=self.cancel)
+        w = tk.Button(box, text="OK", width=15, command=self.ok, default="active")
         w.pack(side="left", padx=5, pady=5)
 
         self.bind("<Return>", self.ok)
-        self.bind("<Escape>", self.cancel)
 
         box.pack()
 
     # standard button semantics
     def ok(self, event=None):
-        if not self.validate():
-            messagebox.showerror("Error", "Please enter a valid integer between 1-1000")
-            self.initial_focus.focus_set() # put focus back
-            return
 
         self.withdraw()
         self.update_idletasks()
 
-        self.apply()
-        self.cancel( cancelled = False )
-
-    def cancel( self, event=None, cancelled = True ):
-        self.cancelled = cancelled
-
         self.parent.root.focus_set()
         self.destroy()
-
-    # command hooks
-    def validate(self):
-        results = []
-        for val in self.result:
-            results.append( val.get() )
-        try:
-            for string in results:
-                string = str( string )
-        except ValueError:
-            return 0
-
-        return 1 # override
-
-    def apply(self):
-        pass
-
-    def getResult( self ):
-        print( self.result[4] )
-        return self.result
-
-    def userCancelled( self ):
-        return self.cancelled
 
 if __name__ == "__main__":
     dapp = DisplayApp(840, 630)
