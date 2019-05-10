@@ -68,12 +68,37 @@ class DisplayApp:
 
         self.axes_endpoints = np.matrix( [[0.2,-0.2,0,1],[1.4,-0.2,0,1],
                                           [0.2,-0.2,0,1],[0.2,.8,0,1],
-                                          [0.2,0.8,0,1],[1.4,.8,0,1],
-                                          [1.4,0.8,0,1],[1.4,-0.2,0,1]] )
+                                          [0.2,0.8,0,1], [1.4,.8,0,1],
+                                          [1.4,0.8,0,1], [1.4,-0.2,0,1]] )
+
+        self.hoop_endpoints = np.matrix( [[0.77,-0.13,0,1],[0.83,-0.07,0,1]] )
+
+        self.backboard_endpoints = np.matrix( [[0.73,-0.129,0,1],[0.87,-0.129,0,1]])
+
+        self.outerpaint_endpoints = np.matrix( [[0.6,-0.2,0,1], [0.6, 0.25,0,1],
+                                                [1.0,-0.2,0,1], [1.0, 0.25,0,1],
+                                                [0.6,-0.2,0,1], [1.0,-0.2,0,1],
+                                                [0.6, 0.25,0,1], [1.0, 0.25,0,1]] )
+
+        self.innerpaint_endpoints = np.matrix( [[0.65,-0.2,0,1], [0.65, 0.25,0,1],
+                                                [0.95,-0.2,0,1], [0.95, 0.25,0,1]])
+
+        self.freethrow_endpoints = np.matrix( [[0.65,0.1,0,1], [0.95, 0.4,0,1],
+                                               [0.65,0.1,0,1], [0.95, 0.4,0,1],
+                                               [0.7,-0.2,0,1], [0.9, 0.0,0,1]])
+
+        self.threecorner_endpoints = np.matrix( [[0.3,-0.2,0,1], [0.3, 0.1,0,1],
+                                                 [1.3,-0.2,0,1], [1.3, 0.1,0,1]])
+
+        self.threebreakpoint_endpoints = np.matrix( [[0.3,-0.3,0,1],[1.3,0.5,0,1]] )
+
+        self.centercourt_endpoints = np.matrix( [[0.625,0.625,0,1], [0.975, 0.975,0,1],
+                                               [0.725,0.725,0,1], [0.875, 0.875,0,1]])
 
         self.axes = []
         self.court = []
         self.buildAxes()
+        self.buildCourt()
 
         # set up the application state
         self.pt_i = 4
@@ -212,13 +237,55 @@ class DisplayApp:
             self.canvas.delete( obj )
         vtm = self.view.build()
         pts = (vtm * self.axes_endpoints.T).T
-        # x - blue
-        # y - red
-        # z - green
+
         self.axes.append( self.canvas.create_line( pts[0,0], pts[0,1], pts[1,0], pts[1,1] ) )
         self.axes.append( self.canvas.create_line( pts[2,0], pts[2,1], pts[3,0], pts[3,1] ) )
         self.axes.append( self.canvas.create_line( pts[4,0], pts[4,1], pts[5,0], pts[5,1] ) )
         self.axes.append( self.canvas.create_line( pts[6,0], pts[6,1], pts[7,0], pts[7,1] ) )
+        return
+
+    def buildCourt(self):
+        for obj in self.court:
+            self.canvas.delete( obj )
+        vtm = self.view.build()
+
+        pts = ( vtm * self.hoop_endpoints.T ).T
+        hoop = self.canvas.create_oval( pts[0,0], pts[0,1], pts[1,0], pts[1,1],width=2 )
+
+        pts = ( vtm * self.backboard_endpoints.T ).T
+        backboard = self.canvas.create_line( pts[0,0], pts[0,1], pts[1,0], pts[1,1],width=3 )
+
+        pts = ( vtm * self.outerpaint_endpoints.T ).T
+        outerpaint_left =   self.canvas.create_line( pts[0,0], pts[0,1], pts[1,0], pts[1,1],width=2 )
+        outerpaint_right =  self.canvas.create_line( pts[2,0], pts[2,1], pts[3,0], pts[3,1],width=2 )
+        outerpaint_bottom = self.canvas.create_line( pts[4,0], pts[4,1], pts[5,0], pts[5,1],width=2 )
+        outerpaint_top =    self.canvas.create_line( pts[6,0], pts[6,1], pts[7,0], pts[7,1],width=2 )
+
+        pts = ( vtm * self.innerpaint_endpoints.T ).T
+        innerpaint_left =   self.canvas.create_line( pts[0,0], pts[0,1], pts[1,0], pts[1,1],width=2 )
+        innerpaint_right =  self.canvas.create_line( pts[2,0], pts[2,1], pts[3,0], pts[3,1],width=2 )
+
+        pts = ( vtm * self.freethrow_endpoints.T ).T
+        freethrow_top =     self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=0, extent=180, style='arc',width=2 )
+        freethrow_bot =     self.canvas.create_arc( pts[2,0], pts[2,1], pts[3,0], pts[3,1], start=0, extent=-180, style='arc',width=2 )
+        restricted_area =   self.canvas.create_arc( pts[4,0], pts[4,1], pts[5,0], pts[5,1], start=0, extent=180, style='arc',width=2)
+
+        pts = ( vtm * self.threecorner_endpoints.T ).T
+        threecorner_left =   self.canvas.create_line( pts[0,0], pts[0,1], pts[1,0], pts[1,1],width=2 )
+        threecorner_right =  self.canvas.create_line( pts[2,0], pts[2,1], pts[3,0], pts[3,1],width=2 )
+
+        pts = ( vtm * self.threebreakpoint_endpoints.T ).T
+        threebreakpoint = self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=0, extent=180, style='arc',width=2 )
+
+        pts = ( vtm * self.centercourt_endpoints.T ).T
+        centercourt_outer =     self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=0, extent=-180, style='arc',width=2 )
+        centercourt_inner =     self.canvas.create_arc( pts[2,0], pts[2,1], pts[3,0], pts[3,1], start=0, extent=-180, style='arc',width=2 )
+
+        self.court = [hoop,backboard,outerpaint_left,outerpaint_right,outerpaint_bottom,
+                      outerpaint_top,innerpaint_left,innerpaint_right, freethrow_top,
+                      freethrow_bot, restricted_area, threecorner_left,threecorner_right,
+                      threebreakpoint, centercourt_outer, centercourt_inner]
+
         return
 
     # modify the endpoints of the axes to their new location
@@ -232,6 +299,43 @@ class DisplayApp:
             line = self.canvas.coords( line, pts[line_i * 2,0], pts[line_i * 2,1],
                                              pts[(line_i * 2) + 1,0], pts[(line_i * 2) + 1,1] )
             line_i += 1
+
+        return
+
+    def updateCourt(self):
+        vtm = self.view.build()
+
+        pts = ( vtm * self.hoop_endpoints.T ).T
+        self.canvas.coords( self.court[0], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+
+        pts = ( vtm * self.backboard_endpoints.T ).T
+        self.canvas.coords( self.court[1], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+
+        pts = ( vtm * self.outerpaint_endpoints.T ).T
+        self.canvas.coords( self.court[2], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.court[3], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+        self.canvas.coords( self.court[4], pts[4,0], pts[4,1], pts[5,0], pts[5,1] )
+        self.canvas.coords( self.court[5], pts[6,0], pts[6,1], pts[7,0], pts[7,1] )
+
+        pts = ( vtm * self.innerpaint_endpoints.T ).T
+        self.canvas.coords( self.court[6], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.court[7], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+
+        pts = ( vtm * self.freethrow_endpoints.T ).T
+        self.canvas.coords( self.court[8], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.court[9], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+        self.canvas.coords( self.court[10],  pts[4,0], pts[4,1], pts[5,0], pts[5,1] )
+
+        pts = ( vtm * self.threecorner_endpoints.T ).T
+        self.canvas.coords( self.court[11], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.court[12], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+
+        pts = ( vtm * self.threebreakpoint_endpoints.T ).T
+        self.canvas.coords( self.court[13], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+
+        pts = ( vtm * self.centercourt_endpoints.T ).T
+        self.canvas.coords( self.court[14], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.court[15], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
 
         return
 
@@ -305,7 +409,7 @@ class DisplayApp:
                                           [0,0,0,1],[0,1,0,1],
                                           [0,0,0,1],[0,0,1,1]] )
         self.updateAxes()
-        self.updateFits()
+        self.updateCourt()
         self.updatePoints()
         print('handling reset button')
 
@@ -323,6 +427,7 @@ class DisplayApp:
         self.clearAll() # delete all objects from canvas and clear their lists
         self.view.reset() # reset view object
         self.updateAxes() # redraw axes
+        self.updateCourt()
 
         # indices for player shots, and retrival of string and numerical data
         self.playerShots = np.where( self.data.data[:,0] == playerID )[0]
@@ -399,6 +504,7 @@ class DisplayApp:
         d1 = ( diff[1] / self.view.screen[0,1] ) * self.view.extent[0,1]
         self.view.vrp += ( d0 * self.view.u ) + ( d1 * self.view.vup )
         self.updateAxes()
+        self.updateCourt()
         self.updatePoints()
 
     # scaling
@@ -410,6 +516,7 @@ class DisplayApp:
         if s0 <.1: s0 = .1
         self.view.extent = self.exCopy * s0
         self.updateAxes()
+        self.updateCourt()
         self.updatePoints()
 
     # scaling
@@ -418,6 +525,7 @@ class DisplayApp:
         if s0 < 0: s0 = .9
         self.view.extent = self.view.extent * s0
         self.updateAxes()
+        self.updateCourt()
         self.updatePoints()
 
     def _bound_to_mousewheel(self, event):
@@ -436,6 +544,7 @@ class DisplayApp:
         self.view.rotateVRC( d0, -d1 )
 
         self.updateAxes()
+        self.updateCourt()
         self.updatePoints()
 
     def generateSize( self, scalar ):
