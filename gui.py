@@ -100,6 +100,9 @@ class DisplayApp:
         self.threevis_endpoints = np.matrix( [[0.2,-0.2,0,1], [0.3, 0.1,0,1],
                                               [1.3,-0.2,0,1], [1.4, 0.1,0,1]])
 
+        self.ravis_endpoints = np.matrix( [[0.65,-0.2,0,1], [0.95,0.05,0,1],
+                                           [0.65,0.05,0,1], [0.95,0.25,0,1]] )
+
         self.axes = []
         self.court = []
         self.heat = []
@@ -445,6 +448,8 @@ class DisplayApp:
         for header in self.data.enum:
             if self.data.enum[header] == "Left Corner 3": left_three = int( header - 1 )
             if self.data.enum[header] == "Right Corner 3": right_three = int( header - 1 )
+            if self.data.enum[header] == "Restricted Area": restricted_area = int( header - 1 )
+            if self.data.enum[header] == "In The Paint (Non-RA)": paint = int( header - 1 )
 
         if misses[left_three] + makes[left_three] != 0:
             left_perc = round( ( makes[left_three] / ( misses[left_three] + makes[left_three] ) ) * 100 )
@@ -452,6 +457,12 @@ class DisplayApp:
         if misses[right_three] + makes[right_three] != 0:
             right_perc = round( ( makes[right_three] / ( misses[right_three] + makes[right_three] ) ) * 100 )
         else: right_perc = 0
+        if misses[restricted_area] + makes[restricted_area] != 0:
+            ra_perc = round( ( makes[restricted_area] / ( misses[restricted_area] + makes[restricted_area] ) ) * 100 )
+        else: ra_perc = 0
+        if misses[paint] + makes[paint] != 0:
+            paint_perc = round( ( makes[paint] / ( misses[paint] + makes[paint] ) ) * 100 )
+        else: ra_perc = 0
 
         colormap = cm.get_cmap('Reds')
 
@@ -459,6 +470,12 @@ class DisplayApp:
         pts = ( vtm * self.threevis_endpoints.T ).T
         threecorner_left =   self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(left_perc/100)[:-1] ) )
         threecorner_right =  self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(right_perc/100)[:-1] ) )
+
+        pts = ( vtm * self.ravis_endpoints.T ).T
+        ravis_whole = self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(ra_perc/100)[:-1] ) )
+        paint_whole = self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(paint_perc/100)[:-1] ) )
+
+        self.buildCourt()
 
     def handleStats( self  ):
         player = self.plyrBox.curselection()[0]
