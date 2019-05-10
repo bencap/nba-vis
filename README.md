@@ -3,15 +3,15 @@
 <b> Running the GUI </b>
 
 download files, and run gui.py by executing
-python gui.py
+'python gui.py'
 
 
 <b> Accessing Data </b>
 
 data relevant to this visualization and in the expected format is contained in the data folder.
 original shooting data can be downloaded here: https://github.com/toddwschneider/nba-shots-db
-and then put into the proper format by executing 
-python split_on_season.py shots.csv
+follow instructions to download, then export to csv with psql. Put into proper format by executing
+'python split_on_season.py shots.csv'
 
 
 <b> Player Information </b>
