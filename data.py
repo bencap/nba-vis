@@ -218,7 +218,6 @@ class Data:
 
         self.data = np.matrix( self.data )
         self.data_s = np.matrix( self.data_s )
-        print( tmp )
         return 1
 
     # return a list of the data headers

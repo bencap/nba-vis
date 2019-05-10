@@ -5,19 +5,15 @@
 
 import tkinter as tk
 from tkinter import filedialog
-from tkinter import messagebox
 import math
 import random
 import numpy as np
-from colour import Color
 import view
 import data
 import analysis
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
 from matplotlib import cm
 import matplotlib as mpl
+from matplotlib.colors import ListedColormap
 
 # create a class to build and manage the display
 class DisplayApp:
@@ -98,10 +94,24 @@ class DisplayApp:
                                                [0.725,0.725,0,1], [0.875, 0.875,0,1]])
 
         self.threevis_endpoints = np.matrix( [[0.2,-0.2,0,1], [0.3, 0.1,0,1],
-                                              [1.3,-0.2,0,1], [1.4, 0.1,0,1]])
+                                              [1.3,-0.2,0,1], [1.4, 0.1,0,1],
+                                              [0.2, 0.3,0,1], [1.4,0.8,0,1]])
+
+        self.threecenter_endpoints = np.matrix( [[0.2,0.6,0,1], [1.4,0.8,0,1]])
+
+        self.threebreakleft_endpoints = np.matrix( [[0.2,0.1,0,1], [0.2,0.8,0,1],
+                                                    [0.8,0.3,0,1],  [0.3, 0.1,0,1]])
+
+        self.threebreakright_endpoints = np.matrix( [[1.4,0.1,0,1], [1.4,0.8,0,1],
+                                                    [0.8,0.3,0,1],  [1.3,0.1,0,1]])
 
         self.ravis_endpoints = np.matrix( [[0.65,-0.2,0,1], [0.95,0.05,0,1],
                                            [0.65,0.05,0,1], [0.95,0.25,0,1]] )
+
+        self.threebreakvis_endpoints = np.matrix( [[0.3,-0.3,0,1],[1.3,0.5,0,1]] )
+
+        self.rightleftmid_endpoints = np.matrix( [[0.3,-0.2,0,1], [0.65, 0.1,0,1],
+                                                  [0.95,-0.2,0,1], [1.3, 0.1,0,1]])
 
         self.axes = []
         self.court = []
@@ -276,7 +286,7 @@ class DisplayApp:
 
         pts = ( vtm * self.freethrow_endpoints.T ).T
         freethrow_top =     self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=0, extent=180, style='arc',width=2 )
-        freethrow_bot =     self.canvas.create_arc( pts[2,0], pts[2,1], pts[3,0], pts[3,1], start=0, extent=-180, style='arc',width=1 )
+        freethrow_bot =     self.canvas.create_arc( pts[2,0], pts[2,1], pts[3,0], pts[3,1], start=0, extent=-180, style='arc',width=2 )
         restricted_area =   self.canvas.create_arc( pts[4,0], pts[4,1], pts[5,0], pts[5,1], start=0, extent=180, style='arc',width=2)
 
         pts = ( vtm * self.threecorner_endpoints.T ).T
@@ -348,15 +358,48 @@ class DisplayApp:
 
         return
 
+    def updateHeat(self):
+        if len(self.heat) < 1:
+            return
+
+        vtm = self.view.build()
+        pts = ( vtm * self.threevis_endpoints.T ).T
+        self.canvas.coords( self.heat[0], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.heat[1], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+        self.canvas.coords( self.heat[2], pts[4,0], pts[4,1], pts[5,0], pts[5,1] )
+
+        vtm = self.view.build()
+        pts = ( vtm * self.threebreakleft_endpoints.T ).T
+        self.canvas.coords( self.heat[3], pts[0,0], pts[0,1], pts[1,0], pts[1,1], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+
+        vtm = self.view.build()
+        pts = ( vtm * self.threebreakright_endpoints.T ).T
+        self.canvas.coords( self.heat[4], pts[0,0], pts[0,1], pts[1,0], pts[1,1], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+
+        pts = ( vtm * self.threebreakvis_endpoints.T ).T
+        self.canvas.coords( self.heat[5], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.heat[6], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.heat[7], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+
+        pts = ( vtm * self.ravis_endpoints.T ).T
+        self.canvas.coords( self.heat[8], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.heat[9], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+
+        pts = ( vtm * self.rightleftmid_endpoints.T ).T
+        self.canvas.coords( self.heat[10], pts[0,0], pts[0,1], pts[1,0], pts[1,1] )
+        self.canvas.coords( self.heat[11], pts[2,0], pts[2,1], pts[3,0], pts[3,1] )
+
+        return
+
     # clear the canvas of all points and models
     def clearAll( self ):
         # Clear Canvas of Normal Plot Points
-        deleted = 0
-        for pt in self.objects:
+        for pt in self.heat:
             self.canvas.delete( pt )
-            deleted += 1
-        self.pt_i = self.pt_i + deleted
-        self.objects = []
+        for pt in self.court:
+            self.canvas.delete( pt )
+        self.heat = []
+        self.cort = []
 
     # update all plotted points
     def updatePoints( self ):
@@ -419,6 +462,7 @@ class DisplayApp:
                                           [0,0,0,1],[0,0,1,1]] )
         self.updateAxes()
         self.updateCourt()
+        self.updateHeat()
         self.updatePoints()
         print('handling reset button')
 
@@ -443,37 +487,137 @@ class DisplayApp:
         self.playerShotStringData = self.data.data_s[self.playerShots,1:4]
         self.playerShotNumData = self.data.data[self.playerShots,2:4]
 
-        makes, misses = self.buildPerc( self.playerShotStringData, self.playerShotNumData, playerID )
+        makes, misses, midrange, breakpoint = self.buildPerc( self.playerShotStringData, self.playerShotNumData, playerID )
 
+        indices_mid = []
+        indices_break = []
+        for zone in self.shot_zone:
+            indices_mid.append( np.where( self.playerShotStringData[midrange,1] == zone )[0] )
+            indices_break.append( np.where( self.playerShotStringData[breakpoint,1] == zone )[0] )
+
+        makes_mid = []
+        misses_mid = []
+        for idx in indices_mid:
+            if len( idx ) < 1:
+                makes_mid.append( 0 )
+                misses_mid.append( 0 )
+                continue
+            makes_mid.append( len( np.where( self.playerShotNumData[idx,1] == 1 )[0] )  )
+            misses_mid.append( len( np.where( self.playerShotNumData[idx,1] == 0 )[0] ) )
+
+        makes_break = []
+        misses_break = []
+        for idx in indices_break:
+            if len( idx ) < 1:
+                makes_break.append( 0 )
+                misses_break.append( 0 )
+                continue
+            makes_break.append( len( np.where( self.playerShotNumData[idx,1] == 1 )[0] ) )
+            misses_break.append( len( np.where( self.playerShotNumData[idx,1] == 0 )[0] ) )
+
+        # locate index for different shot types
         for header in self.data.enum:
             if self.data.enum[header] == "Left Corner 3": left_three = int( header - 1 )
             if self.data.enum[header] == "Right Corner 3": right_three = int( header - 1 )
             if self.data.enum[header] == "Restricted Area": restricted_area = int( header - 1 )
             if self.data.enum[header] == "In The Paint (Non-RA)": paint = int( header - 1 )
 
+        leftcenter_three = 2
+        rightcenter_three = 4
+        center_three = 1
+        left_mid = 3
+        right_mid = 5
+        leftcenter_mid = 2
+        rightcenter_mid = 2
+        center_mid = 1
+
+        # build heatmap percentages
         if misses[left_three] + makes[left_three] != 0:
             left_perc = round( ( makes[left_three] / ( misses[left_three] + makes[left_three] ) ) * 100 )
         else: left_perc = 0
+
         if misses[right_three] + makes[right_three] != 0:
             right_perc = round( ( makes[right_three] / ( misses[right_three] + makes[right_three] ) ) * 100 )
         else: right_perc = 0
+
         if misses[restricted_area] + makes[restricted_area] != 0:
             ra_perc = round( ( makes[restricted_area] / ( misses[restricted_area] + makes[restricted_area] ) ) * 100 )
         else: ra_perc = 0
+
         if misses[paint] + makes[paint] != 0:
             paint_perc = round( ( makes[paint] / ( misses[paint] + makes[paint] ) ) * 100 )
         else: ra_perc = 0
 
+        if makes_mid[left_mid] + misses_mid[left_mid] != 0:
+            leftmid_perc = round( ( makes_mid[left_mid] / ( misses_mid[left_mid] + makes_mid[left_mid] ) ) * 100 )
+        else: leftmid_perc = 0
+
+        if makes_mid[right_mid] + misses_mid[right_mid] != 0:
+            rightmid_perc = round( ( makes_mid[right_mid] / ( misses_mid[right_mid] + makes_mid[right_mid] ) ) * 100 )
+        else: rightmid_perc = 0
+
+        if makes_mid[leftcenter_mid] + misses_mid[leftcenter_mid] != 0:
+            leftcentermid_perc = round( ( makes_mid[leftcenter_mid] / ( misses_mid[leftcenter_mid] + makes_mid[leftcenter_mid] ) ) * 100 )
+        else: leftcentermid_perc = 0
+
+        if makes_mid[rightcenter_mid] + misses_mid[rightcenter_mid] != 0:
+            rightcentermid_perc = round( ( makes_mid[rightcenter_mid] / ( misses_mid[rightcenter_mid] + makes_mid[rightcenter_mid] ) ) * 100 )
+        else: rightcentermid_perc = 0
+
+        if makes_mid[center_mid] + misses_mid[center_mid] != 0:
+            centermid_perc = round( ( makes_mid[center_mid] / ( misses_mid[center_mid] + makes_mid[center_mid] ) ) * 100 )
+        else: centermid_perc = 0
+
+        if makes_break[center_three] + misses_break[center_three] != 0:
+            centerthree_perc = round( ( makes_break[center_three] / ( misses_break[center_three] + makes_break[center_three] ) ) * 100 )
+        else: centerthree_perc = 0
+
+        if makes_break[leftcenter_three] + misses_break[leftcenter_three] != 0:
+            leftcenterthree_perc = round( ( makes_break[leftcenter_three] / ( misses_break[leftcenter_three] + makes_break[leftcenter_three] ) ) * 100 )
+        else: leftcenterthree_perc = 0
+
+        if makes_break[rightcenter_three] + misses_break[rightcenter_three] != 0:
+            rightcenterthree_perc = round( ( makes_break[rightcenter_three] / ( misses_break[rightcenter_three] + makes_break[rightcenter_three] ) ) * 100 )
+        else: rightcenterthree_perc = 0
+
         colormap = cm.get_cmap('Reds')
+        newcolors = colormap(np.linspace(0, 1, 256))
+        gray = np.array([220/256, 220/256, 220/256, 1])
+        newcolors[:1, :] = gray
+        colormap = ListedColormap(newcolors)
 
         vtm = self.view.build()
         pts = ( vtm * self.threevis_endpoints.T ).T
-        threecorner_left =   self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(left_perc/100)[:-1] ) )
-        threecorner_right =  self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(right_perc/100)[:-1] ) )
+        threecorner_left =   self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(left_perc/100)[:-1] ),width=1 )
+        threecorner_right =  self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(right_perc/100)[:-1] ),width=1 )
+        threecenter =        self.canvas.create_rectangle( pts[4,0], pts[4,1], pts[5,0], pts[5,1],fill=mpl.colors.to_hex( colormap(centerthree_perc/100)[:-1] ),width=1 )
+
+        vtm = self.view.build()
+        pts = ( vtm * self.threebreakleft_endpoints.T ).T
+        threebreakleft = self.canvas.create_polygon( pts[0,0], pts[0,1], pts[1,0], pts[1,1], pts[2,0], pts[2,1], pts[3,0], pts[3,1],
+                                                     fill = mpl.colors.to_hex( colormap(leftcenterthree_perc/100)[:-1] ),outline='black' )
+
+        vtm = self.view.build()
+        pts = ( vtm * self.threebreakright_endpoints.T ).T
+        threebreakright = self.canvas.create_polygon( pts[0,0], pts[0,1], pts[1,0], pts[1,1], pts[2,0], pts[2,1], pts[3,0], pts[3,1],
+                                                     fill = mpl.colors.to_hex( colormap(rightcenterthree_perc/100)[:-1] ),outline='black' )
+
+        pts = ( vtm * self.threebreakvis_endpoints.T ).T
+        centerleft =  self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=0, extent=53,fill=mpl.colors.to_hex( colormap(rightmid_perc/100)[:-1] ),width=1 )
+        centermid =   self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=53, extent=80,fill=mpl.colors.to_hex( colormap(centermid_perc/100)[:-1] ),width=1 )
+        centerright = self.canvas.create_arc( pts[0,0], pts[0,1], pts[1,0], pts[1,1], start=128, extent=52,fill=mpl.colors.to_hex( colormap(leftcentermid_perc/100)[:-1] ),width=1 )
 
         pts = ( vtm * self.ravis_endpoints.T ).T
-        ravis_whole = self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(ra_perc/100)[:-1] ) )
-        paint_whole = self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(paint_perc/100)[:-1] ) )
+        ravis_whole = self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(ra_perc/100)[:-1] ),width=0.5 )
+        paint_whole = self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(paint_perc/100)[:-1] ),width=0.5)
+
+        pts = ( vtm * self.rightleftmid_endpoints.T ).T
+        rightmid =   self.canvas.create_rectangle( pts[0,0], pts[0,1], pts[1,0], pts[1,1],fill=mpl.colors.to_hex( colormap(rightmid_perc/100)[:-1] ),width=0.5 )
+        leftmid =    self.canvas.create_rectangle( pts[2,0], pts[2,1], pts[3,0], pts[3,1],fill=mpl.colors.to_hex( colormap(leftmid_perc/100)[:-1] ),width=0.5 )
+
+        self.heat = [threecorner_left,threecorner_right,threecenter,threebreakleft,
+                     threebreakright,centerleft,centermid,centerright,ravis_whole,
+                     paint_whole,rightmid,leftmid]
 
         self.buildCourt()
 
@@ -488,7 +632,7 @@ class DisplayApp:
         self.playerShotStringData = self.data.data_s[self.playerShots,1:4]
         self.playerShotNumData = self.data.data[self.playerShots,2:4]
 
-        makes, misses = self.buildPerc( self.playerShotStringData, self.playerShotNumData, player_id )
+        makes, misses, noneed, noneeed = self.buildPerc( self.playerShotStringData, self.playerShotNumData, player_id )
 
         title = "Numeric Shot Statistics for " + name[0][0,0]
         dialog = Dialog_PCA_Stats( self, self.data.enum, makes, misses, player_id, title )
@@ -497,6 +641,8 @@ class DisplayApp:
     def buildPerc( self, playerString, playerNum, player_id ):
         indices = []
         for k in self.data.enum:
+            if self.data.enum[k] == "Mid-Range": midrange = int( k - 1 )
+            if self.data.enum[k] == "Above the Break 3": atb3 = int( k - 1 )
             indices.append( np.where( playerNum[:,0] == k )[0] )
 
         makes = []
@@ -510,7 +656,7 @@ class DisplayApp:
             makes.append( len( np.where( playerNum[idx,1] == 1 )[0] ) )
             misses.append( len( np.where( playerNum[idx,1] == 0 )[0] ) )
 
-        return (makes,misses)
+        return (makes,misses,indices[midrange],indices[atb3])
 
     # translation
     def handleButton1(self, event):
@@ -578,6 +724,7 @@ class DisplayApp:
         self.view.vrp += ( d0 * self.view.u ) + ( d1 * self.view.vup )
         self.updateAxes()
         self.updateCourt()
+        self.updateHeat()
         self.updatePoints()
 
     # scaling
@@ -590,6 +737,7 @@ class DisplayApp:
         self.view.extent = self.exCopy * s0
         self.updateAxes()
         self.updateCourt()
+        self.updateHeat()
         self.updatePoints()
 
     # scaling
@@ -599,6 +747,7 @@ class DisplayApp:
         self.view.extent = self.view.extent * s0
         self.updateAxes()
         self.updateCourt()
+        self.updateHeat()
         self.updatePoints()
 
     def _bound_to_mousewheel(self, event):
@@ -618,21 +767,8 @@ class DisplayApp:
 
         self.updateAxes()
         self.updateCourt()
+        self.updateHeat()
         self.updatePoints()
-
-    def generateSize( self, scalar ):
-        self.size_col = np.multiply( self.size_col, scalar )
-
-    def convertColor( self, x ):
-        red = Color("red")
-        colors = list(red.range_to(Color("blue"),100))
-        return colors[ int( x[0]*99 ) ]
-
-    def generateColor( self ):
-        if isinstance( self.color_col[0], Color ):
-            return
-        rounded = self.color_col[:,0].round( 3 )
-        self.color_col = np.apply_along_axis( self.convertColor, 1, rounded )
 
     def main(self):
         print('Entering main loop')
