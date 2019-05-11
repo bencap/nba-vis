@@ -718,17 +718,18 @@ class DisplayApp:
 
     # rotation
     def handleButton3Motion( self, event):
-        print('handle button 3 motion: %d %d' % (event.x, event.y) )
-        diff = ( event.x - self.baseClick[0], event.y - self.baseClick[1] )
-        d0 = ( diff[0] / 150 ) * math.pi
-        d1 = ( diff[1] / 150 ) * math.pi
-        self.view = self.viewCopy.clone()
-        self.view.rotateVRC( d0, -d1 )
+#         print('handle button 3 motion: %d %d' % (event.x, event.y) )
+#         diff = ( event.x - self.baseClick[0], event.y - self.baseClick[1] )
+#         d0 = ( diff[0] / 150 ) * math.pi
+#         d1 = ( diff[1] / 150 ) * math.pi
+#         self.view = self.viewCopy.clone()
+#         self.view.rotateVRC( d0, -d1 )
 
-        self.updateAxes()
-        self.updateCourt()
-        self.updateHeat()
-        self.updatePoints()
+#         self.updateAxes()
+#         self.updateCourt()
+#         self.updateHeat()
+#         self.updatePoints()
+	pass # rotation is unnecessary here and only serves to break the objects
 
     def main(self):
         print('Entering main loop')
