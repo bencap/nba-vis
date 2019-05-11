@@ -1,4 +1,7 @@
-"# nba-vis" 
+# NBA Shooting Stats Visualizer
+Creative choice for Colby College CS 251 Final Project
+
+## Usage
 
 <b> Running the GUI </b>
 
@@ -26,3 +29,7 @@ Upon opening a file, teams will populate on the right side of the window. Clicki
 populate a listbox with players from that team. Click on a player, then select view shot statistics
 for a detailed pop-up of shot selection and accuracy. Or, select plot in order to display a heat map
 of the court with increasingly red shading based on the percentage of shots made.
+
+## Tech
+
+Built using Python 3 and Tkinter
