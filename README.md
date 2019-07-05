@@ -1,35 +1,55 @@
-# NBA Shooting Stats Visualizer
-Creative choice for Colby College CS 251 Final Project
+## NBA Shooting Stats Visualizer
 
-## Usage
+This project allows a user to visualize NBA shooting data through a simple GUI. The GUI makes it simple for a user to load and find players from any team. Currently, the GUI only supports players who are still in the league; loading datafiles from very old years will result in few available visualizations despite the data containing shooting data for retired players. The GUI supports both a heatmap to quickly see success rates in different court areas as well as a dialogue box that displays numeric stats to more accurately interpret the heatmap.  
 
-<b> Running the GUI </b>
+## Getting Started
 
-download files, and run gui.py by executing
-'python gui.py'
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
+### Prerequisites
 
-<b> Accessing Data </b>
+What things you need to install the software and how to install them
 
-data relevant to this visualization and in the expected format is contained in the data folder.
-original shooting data can be downloaded here: https://github.com/toddwschneider/nba-shots-db
-follow instructions to download, then export to csv with psql. Put into proper format by executing
-'python split_on_season.py shots.csv'
+```
+Python3 +
+PostGreSQL 11.0 +
+NumPy, MatPlotLib, and TKinter
+```
 
+### Installing and Running
 
-<b> Player Information </b>
+A step by step series of examples that tell you how to get a development env running
 
-player population is current NBA players, despite data dating to 1996. If a data file from more
-distant seasons is loaded, there will likely be very few players to analyze.
+Follow instructions for downloading the NBA Shots Database, linked below in the 'Built With' section. This will create a local instance of a PostGreSQL database with all shot data present.
 
+Convert this database into a CSV file with some version of below, run from psql command line
 
-<b> Utilizing the GUI </b>
+```
+\COPY shots_db TO 'filename' CSV HEADER
+```
 
-Upon opening a file, teams will populate on the right side of the window. Clicking on a team will
-populate a listbox with players from that team. Click on a player, then select view shot statistics
-for a detailed pop-up of shot selection and accuracy. Or, select plot in order to display a heat map
-of the court with increasingly red shading based on the percentage of shots made.
+Split the data into the expected per seasong shot files with
 
-## Tech
+```
+python split_on_season.py shots.csv
+```
 
-Built using Python 3 and Tkinter
+Run the gui
+
+```
+python gui.py
+```
+
+Within the GUI, the general workflow is to open a file, select a team from the team list box, select a player from the player list box, and view the court populate with the shooting success of that player. Once the player is selected, you are able to view the dialogue box of the numerical stats for the selected player.
+
+## Built With
+
+* [Python3](https://www.python.org/) - Used for all Project Scripts
+* [PostGreSQL](https://www.postgresql.org/) - Database for Shot Data
+* [NBA Shots DB](https://github.com/toddwschneider/nba-shots-db) - Used to Populate the pSQL Database
+
+## Authors
+
+* **Ben Capodanno** - *Initial work* - [PurpleBooth](https://github.com/bencap)
+
+See also the list of [contributors](https://github.com/bencap/nba-vis/contributors) who participated in this project.
